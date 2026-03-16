@@ -25,22 +25,19 @@ public class AccountService {
         this.transactionHelper = transactionHelper;
     }
 
-    public Account createAccount() {
-        return new Account(accountProperties.getDefaultAmount());
-    }
-
     public Account createAccount(User user) {
         if (user == null) {
             throw new IllegalArgumentException("user must not be null");
         }
 
-        Account newAccount = new Account(accountProperties.getDefaultAmount());
-        transactionHelper.executeInTransaction(session -> {
+        return transactionHelper.executeInTransactionOrJoin(() -> {
+            Session session = sessionFactory.getCurrentSession();
+            Account newAccount = new Account(accountProperties.getDefaultAmount());
             newAccount.setOwner(user);
             user.getAccountList().add(newAccount);
             session.persist(newAccount);
+            return newAccount;
         });
-        return newAccount;
     }
 
     public Optional<Account> findAccountById(Integer id) {
@@ -68,7 +65,7 @@ public class AccountService {
         }
         account.setMoneyAmount(account.getMoneyAmount() - amount);
 
-        transactionHelper.executeInTransaction(session ->{
+        transactionHelper.executeInTransaction(session -> {
             session.merge(account);
         });
     }
@@ -81,7 +78,7 @@ public class AccountService {
 
         account.setMoneyAmount(account.getMoneyAmount() + amount);
 
-        transactionHelper.executeInTransaction(session ->{
+        transactionHelper.executeInTransaction(session -> {
             session.merge(account);
         });
     }
@@ -134,7 +131,7 @@ public class AccountService {
         }
         accountFrom.setMoneyAmount(accountFrom.getMoneyAmount() - amount);
 
-        int amountToTransfer = accountTo.getOwner().getId()== accountFrom.getOwner().getId()
+        int amountToTransfer = accountTo.getOwner().getId() == accountFrom.getOwner().getId()
                 ? amount
                 : (int) Math.round(amount * (1 - accountProperties.getTransferCommission()));
         accountTo.setMoneyAmount(accountTo.getMoneyAmount() + amountToTransfer);

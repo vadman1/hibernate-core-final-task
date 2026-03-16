@@ -32,17 +32,16 @@ public class UserService {
             throw new IllegalArgumentException("User already exists with login=%s".formatted(normalizedLogin));
         }
 
-        var user = new User(normalizedLogin, new ArrayList<>());
-        var defaultAccount = accountService.createAccount();
-        defaultAccount.setOwner(user);
-        user.getAccountList().add(defaultAccount);
+        return transactionHelper.executeInTransactionOrJoin(() -> {
+            Session session = sessionFactory.getCurrentSession();
 
-        transactionHelper.executeInTransaction(session -> {
+            var user = new User(normalizedLogin, new ArrayList<>());
+            accountService.createAccount(user);
+
             session.persist(user);
-            session.persist(defaultAccount);
-        });
 
-        return user;
+            return user;
+        });
     }
 
     public User findUserById(Integer id) {
@@ -79,11 +78,11 @@ public class UserService {
     }
 
     private boolean isLoginTaken(String login) {
-         Set<String> logins = findAll()
-                 .stream()
-                 .map(User::getLogin)
-                 .collect(Collectors.toSet());
+        Set<String> logins = findAll()
+                .stream()
+                .map(User::getLogin)
+                .collect(Collectors.toSet());
 
-         return logins.contains(login);
+        return logins.contains(login);
     }
 }

@@ -46,13 +46,13 @@ public class TransactionHelper {
             return result;
         } catch (Exception e) {
             if (transaction != null) {
-                transaction.commit();
+                transaction.rollback();
             }
             throw e;
         }
     }
 
-    private <T> T executeInTransactionOrJoin(Supplier<T> action) {
+    public <T> T executeInTransactionOrJoin(Supplier<T> action) {
         Session session = sessionFactory.getCurrentSession();
         Transaction tx = session.getTransaction();
         boolean owner = tx.getStatus() == TransactionStatus.NOT_ACTIVE;
